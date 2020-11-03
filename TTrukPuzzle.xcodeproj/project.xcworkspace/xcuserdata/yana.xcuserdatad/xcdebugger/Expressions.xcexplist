@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VariablesViewState
+   version = "1.0">
+   <ContextStates>
+      <ContextState
+         contextName = "GameScene.touchesEnded(_:with:):GameScene.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "String(activeShape.name ?? &quot;&quot;) + &quot;Shade&quot;">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "GameScene.touchesMoved(_:with:):GameScene.swift">
+      </ContextState>
+      <ContextState
+         contextName = "GameScene.didMove(to:):GameScene.swift">
+      </ContextState>
+      <ContextState
+         contextName = "GameScene.setActiveShape(node:):GameScene.swift">
+      </ContextState>
+      <ContextState
+         contextName = "GameScene.touchesBegan(_:with:):GameScene.swift">
+      </ContextState>
+      <ContextState
+         contextName = "GameScene.toPandaHand():GameScene.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "  t += &quot;Shade&quot;">
+            </PersistentString>
+            <PersistentString
+               value = "((truck.childNode(withName: String(currentNode?.name ?? &quot;&quot;) + &quot;Shade&quot;)) == nil)">
+            </PersistentString>
+            <PersistentString
+               value = "String(currentNode?.name ?? &quot;&quot;) + &quot;Shade&quot;">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+   </ContextStates>
+</VariablesViewState>
