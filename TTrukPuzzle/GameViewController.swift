@@ -20,7 +20,6 @@ class GameViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        GameViewController.appStoreConnector.restorePurchases()
         let massivProductov: [String] = ["Slikatoon.TTruckPuzzle.FullAccess"]
         GameViewController.appStoreConnector.triggerDelegateToRecieveProducts(massivProductov)
          if let view = self.view as! SKView? {

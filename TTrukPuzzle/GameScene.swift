@@ -28,30 +28,37 @@ class GameScene: SKScene {
     private var isShade: Bool! = false
     private var activeShapePosition: CGPoint!
     private var request : SKProductsRequest!
-    var year: String = ""
-    var yearLabel: SKLabelNode!
-    var lock: SKSpriteNode!
-    var isPurchaced: Bool! = false
+    private var year: String = ""
+    private var yearLabel: SKLabelNode!
+    private var lock: SKSpriteNode!
+    private var isPurchaced: Bool! = false
     
-    //walkingPanda
-    func pandaAnimation () {
+    func pandaBody() {
         leftLeg = panda.childNode(withName: "LeftLeg")
         rightLeg = panda.childNode(withName: "RightLeg")
         leftHand = panda.childNode(withName: "SitRHand")
         rightHand = panda.childNode(withName: "RightHand")
         pandaHead = panda.childNode(withName: "PandaHead")
+    }
+    
+    func rotatePanda() {
         rotateAction (node: rightLeg, angle1: 0.1, angle2: -0.7)
         rotateAction (node: leftLeg, angle1: -1, angle2: 0.5)
         rotateAction (node: leftHand, angle1: -0.5, angle2: 0.5)
         rotateAction (node: rightHand, angle1: 0.5, angle2: -0.5)
         rotateAction (node: pandaHead, angle1: -0.01, angle2: 0.1)
+    }
+    
+    //walkingPanda
+    func pandaAnimation () {
+        pandaBody()
+        rotatePanda()
         panda.run(SKAction.moveTo(x: -230, duration: 4), completion: {
             self.pandaStopAnimations()
-            self.truck.run(SKAction.moveTo(x: 0, duration: 4), completion: {
+            self.truck.run(SKAction.moveTo(x: 0, duration: 3), completion: {
                 audio.playSound(fileName: "Sound/horn", type: "mp3", volume: 1, loop: 0)
                 self.childNode(withName: "Right")?.run(SKAction.unhide())
                 self.childNode(withName: "Play")?.run(SKAction.unhide())
-                self.isPurchaced = self.getPlist()
             })
         })
     }
@@ -71,8 +78,17 @@ class GameScene: SKScene {
         panda.childNode(withName: "SitLHand")?.run(SKAction.unhide())
     }
     
+    func removeBuy () {
+        if (self.isPurchaced) {
+            self.childNode(withName: "Buy")?.run(SKAction.hide())
+        }
+    }
+    
     override func didMove(to view: SKView) {
         trucks = ["FireTruck", "Truck", "CementTruck", "WaterTruck", "PoliceCar", "Ambulance", "Excavator", "Tractor", "Taxi", "Buldozer", "TowTruck", "CraneTruck", "Bus", "IceCreamTruck", "Helicopter", "AIrPlane"]
+        
+        self.isPurchaced = self.getPlist()
+        removeBuy ()
         panda = self.childNode(withName: "Panda")
         truck = self.childNode(withName: trucks[truckNumber])
         self.changeArrowButton () // changebutton
@@ -116,15 +132,16 @@ class GameScene: SKScene {
     func toPandaHand () {
         var positionZ: CGFloat
         var shape: SKSpriteNode!
-        
-        for (nodeIndex, currentNode) in truckDetails.enumerated() {
+    
+        for (nodeIndex, currentNode) in self.truck.children.enumerated() {
             shape = copyTruck (node: currentNode ?? truck)
-            positionZ = currentNode?.zPosition as! CGFloat
+            positionZ = currentNode.zPosition as! CGFloat
             shape.zPosition = positionZ - 1
-            shape.name = String(currentNode?.name ?? "") + "Shade"
-            self.truck.addChild(shape)
-            currentNode?.run(SKAction.sequence([SKAction.wait(forDuration: TimeInterval(nodeIndex) * 0.2), SKAction.move(to: CGPoint(x: 170-(10*nodeIndex), y: -87), duration: 0.3)]), completion: {
-                currentNode?.zPosition = CGFloat(nodeIndex + 5)
+            shape.name = String(currentNode.name ?? "") + "Shade"
+            shape.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+            truck.addChild(shape)
+            currentNode.run(SKAction.sequence([SKAction.wait(forDuration: TimeInterval(nodeIndex) * 0.2), SKAction.move(to: CGPoint(x: 170-(10*nodeIndex), y: -87), duration: 0.3)]), completion: {
+                currentNode.zPosition = CGFloat(nodeIndex + 5)
                 if (nodeIndex == self.truckDetails.count - 1) {
                     self.isShade = true
                 }
@@ -149,19 +166,52 @@ class GameScene: SKScene {
         }
     }
       
-    func setActiveShape (node: SKNode) {
+    func setActiveShape (node: SKNode, location: CGPoint) {
         if (truckDetails.count > 0) {
             for item in truckDetails {
                 if (node.name == item?.name) {
                     activeShape = node
                     activeShape.zPosition = 40
-                    activeShapePosition = node.position
+                    activeShapePosition = activeShape.position
                     isActiveShape = true
                 }
             }
         } else {
             activeShape = SKNode()
             isActiveShape = false
+        }
+    }
+    
+    func purchaces() {
+        let think = self.childNode(withName: "Think")
+        self.isPurchaced = self.getPlist()
+        self.isUserInteractionEnabled = false
+        self.alpha = 0.5
+        GameViewController.appStoreConnector.restorePurchases()
+        think?.run(SKAction.sequence([SKAction.unhide(), SKAction.rotate(byAngle: 10, duration: 5)]), completion: {
+            self.isUserInteractionEnabled = true
+            self.alpha = 1
+            think?.run(SKAction.hide())
+            self.removeBuy ()
+        })
+    }
+    
+    func done () {
+        let date = NSDate()
+        let newFormatter = DateFormatter()
+        newFormatter.dateFormat = "YYYY"
+        let currentYear: Int! = Int(newFormatter.string(from: date as Date))
+
+        let year: Int! = Int(yearLabel.text ?? "")
+               
+        if ((currentYear != nil && year != nil) ) {
+            if ((currentYear - year) > 15 && (currentYear - year) < 105) {
+                GameViewController.appStoreConnector.purchaseAdRemoval()
+                GameViewController.appStoreConnector.restorePurchases()
+                removePopup()
+            } else {
+                yearLabel.text = ""
+            }
         }
     }
     
@@ -188,10 +238,11 @@ class GameScene: SKScene {
                     toPandaHand()
                 }
             case "Lock":
-                let validationPopup = self.childNode(withName: "Popup")
-                validationPopup?.run(SKAction.unhide())
-                yearLabel = validationPopup?.childNode(withName: "Year") as! SKLabelNode
-                           
+                buyApplication()
+            case "Buy":
+                buyApplication()
+            case "purchases":
+                purchaces()
             case "0":
                 setYearLabel(name: touchedNode.name ?? "")
             case "1":
@@ -212,39 +263,24 @@ class GameScene: SKScene {
                 setYearLabel(name: touchedNode.name ?? "")
             case "9":
                 setYearLabel(name: touchedNode.name ?? "")
-                       
             case "Exit":
                 removePopup()
-                       
             case "Remove":
                 yearLabel.text = ""
-                       
             case "Done":
-                let date = NSDate()
-                let newFormatter = DateFormatter()
-                newFormatter.dateFormat = "YYYY"
-                let currentYear: Int! = Int(newFormatter.string(from: date as Date))
-
-                let year: Int! = Int(yearLabel.text ?? "")
-                       
-                if ((currentYear != nil && year != nil) ) {
-                    if ((currentYear - year) > 15 && (currentYear - year) < 105) {
-                        GameViewController.appStoreConnector.purchaseAdRemoval()
-                        GameViewController.appStoreConnector.restorePurchases()
-                        if (truckNumber > 0) {
-                            moveCardOut (x: Int(self.frame.width), side: 1)
-                        }
-                        removePopup()
-                    } else {
-                        yearLabel.text = ""
-                    }
-                }
+                done()
 
             default:
                 if (isShade) {
-                    setActiveShape (node: touchedNode)
+                    setActiveShape (node: touchedNode, location: touchLocation)
                 }
         }
+    }
+    
+    func buyApplication() {
+        let validationPopup = self.childNode(withName: "Popup")
+        validationPopup?.run(SKAction.unhide())
+        yearLabel = (validationPopup?.childNode(withName: "Year") as! SKLabelNode)
     }
     
     func setYearLabel (name: String) {
@@ -264,11 +300,13 @@ class GameScene: SKScene {
         }
         var touchLocation: CGPoint = touch.location(in: self)
         if (activeShape != nil) {
-            for t in touches {
-                touchLocation = t.location(in: self)
+            for touch in touches {
+                touchLocation = touch.previousLocation(in: self)
                 activeShape.position.x = touchLocation.x
-                activeShape.position.y = touchLocation.y }
+                activeShape.position.y = touchLocation.y
+                activeShape.position = activeShape.scene?.convert(activeShape.position, to: activeShape.parent ?? activeShape) ?? CGPoint(x: 0, y: 0)
             }
+       }
     }
     
     // add stars to the screen
@@ -295,10 +333,10 @@ class GameScene: SKScene {
         if (isActiveShape && activeShape.name != nil) {
             let shadeShape = truck.childNode(withName: String(activeShape.name ?? "") + "Shade") as! SKSpriteNode
                 
-            if ((shadeShape.position.y - activeShape.position.y < 20) &&
-                    (activeShape.position.y - shadeShape.position.y < 20) &&
-                    (shadeShape.position.x - activeShape.position.x < 20) &&
-                    (activeShape.position.x - shadeShape.position.x < 20)) {
+            if ((shadeShape.position.y - activeShape.position.y < 40) &&
+                    (activeShape.position.y - shadeShape.position.y < 40) &&
+                    (shadeShape.position.x - activeShape.position.x < 45) &&
+                    (activeShape.position.x - shadeShape.position.x < 45)) {
                   
                 activeShape.position = shadeShape.position
                 activeShape.zPosition = shadeShape.zPosition + 1
@@ -313,16 +351,16 @@ class GameScene: SKScene {
               }
          }
      }
-    
+   
     func changeArrowButton () { //hide/unhide arrow button
         let leftMoveButton: SKNode = self.childNode(withName: "Left") ?? SKNode ()
         let rightMoveButton: SKNode = self.childNode(withName: "Right") ?? SKNode ()
         switch truckNumber {
             case 1:
                 leftMoveButton.run(SKAction.unhide())
-            case (trucks.count):
-                rightMoveButton.run(SKAction.hide())
             case (trucks.count - 1):
+                rightMoveButton.run(SKAction.hide())
+            case (trucks.count - 2):
                 rightMoveButton.run(SKAction.unhide())
             case 0:
                 leftMoveButton.run(SKAction.hide())
@@ -358,10 +396,10 @@ class GameScene: SKScene {
     
     func moveCardToCenter () {
         let moveAction = SKAction.moveTo(x: 0, duration: 2.0)
-        
+        self.isPurchaced = self.getPlist()
         audio.playSound(fileName: "Sound/horn", type: "mp3", volume: 1, loop: 0)
         self.truck.run(moveAction, completion: {
-            if (self.truckNumber > 2 && !self.isPurchaced) {
+            if (self.truckNumber > 4 && !self.isPurchaced) {
                 let lockTexture = SKTexture(imageNamed: "lock")
                 self.lock = SKSpriteNode(texture: lockTexture)
                 self.lock.name = "Lock"
